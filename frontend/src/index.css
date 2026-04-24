@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --bg-base: #0A0A0A;
+  --bg-card: #111111;
+  --bg-input: #0E0E0E;
+  --border: #1F1F1F;
+  --border-focus: #333333;
+  --text-primary: #F5F5F5;
+  --text-secondary: #888888;
+  --text-tertiary: #555555;
+  --accent: #E8FF6B;
+  --accent-dim: rgba(232, 255, 107, 0.1);
+  --success: #6BFF9E;
+  --danger: #FF6B6B;
+  --danger-dim: rgba(255, 107, 107, 0.08);
+  --success-dim: rgba(107, 255, 158, 0.08);
+  --radius: 8px;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 3px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(232, 255, 107, 0.2);
+  color: var(--text-primary);
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
