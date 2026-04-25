@@ -60,9 +60,11 @@ func (s *Submission) ParseJSONFields() error {
 
 // SubmissionQueueItem is a lightweight view used in the reviewer queue listing.
 type SubmissionQueueItem struct {
-	SubmissionID uuid.UUID `json:"submission_id"`
-	MerchantID   uuid.UUID `json:"merchant_id"`
-	State        string    `json:"state"`
-	AtRisk       bool      `json:"at_risk"`
-	CreatedAt    time.Time `json:"created_at"`
+	SubmissionID    uuid.UUID        `json:"submission_id"`
+	MerchantID      uuid.UUID        `json:"merchant_id"`
+	State           string           `json:"state"`
+	AtRisk          bool             `json:"at_risk"`
+	CreatedAt       time.Time        `json:"created_at"`
+	PersonalDetails *PersonalDetails `json:"personal_details,omitempty"`
+	BusinessDetails *BusinessDetails `json:"business_details,omitempty"`
 }

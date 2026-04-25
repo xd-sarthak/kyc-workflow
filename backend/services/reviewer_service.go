@@ -37,7 +37,7 @@ type QueueResponse struct {
 	Total       int                          `json:"total"`
 }
 
-// ListQueue returns submissions in the review pipeline (submitted + under_review), oldest first.
+// ListQueue returns submissions in the "submitted" state, oldest first.
 func (s *ReviewerService) ListQueue(ctx context.Context, limit, offset int) (*QueueResponse, error) {
 	if limit <= 0 {
 		limit = 20
@@ -54,8 +54,7 @@ func (s *ReviewerService) ListQueue(ctx context.Context, limit, offset int) (*Qu
 		"offset", offset,
 	)
 
-	queueStates := []string{string(StateSubmitted), string(StateUnderReview)}
-	subs, total, err := s.submissionStore.ListSubmissionsByStates(ctx, queueStates, limit, offset)
+	subs, total, err := s.submissionStore.ListSubmissionsByState(ctx, string(StateSubmitted), limit, offset)
 	if err != nil {
 		slog.Error("reviewer: failed to list queue", "error", err)
 		return nil, fmt.Errorf("failed to list queue: %w", err)
@@ -69,11 +68,13 @@ func (s *ReviewerService) ListQueue(ctx context.Context, limit, offset int) (*Qu
 			atRiskCount++
 		}
 		items[i] = models.SubmissionQueueItem{
-			SubmissionID: sub.ID,
-			MerchantID:   sub.MerchantID,
-			State:        sub.State,
-			AtRisk:       isAtRisk,
-			CreatedAt:    sub.CreatedAt,
+			SubmissionID:    sub.ID,
+			MerchantID:     sub.MerchantID,
+			State:          sub.State,
+			AtRisk:         isAtRisk,
+			CreatedAt:      sub.CreatedAt,
+			PersonalDetails: sub.PersonalDetails,
+			BusinessDetails: sub.BusinessDetails,
 		}
 	}
 

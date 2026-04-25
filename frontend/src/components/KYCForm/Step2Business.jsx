@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const BUSINESS_TYPES = ['retail', 'wholesale', 'services', 'manufacturing', 'technology', 'other'];
+const BUSINESS_TYPES = ['Freelancer', 'Agency', 'E-commerce', 'Other'];
 
 export default function Step2Business({ data, onChange, onNext, onBack }) {
   const [errors, setErrors] = useState({});
@@ -43,7 +43,7 @@ export default function Step2Business({ data, onChange, onNext, onBack }) {
           <option value="" style={{ background: '#111' }}>Select type</option>
           {BUSINESS_TYPES.map((t) => (
             <option key={t} value={t} style={{ background: '#111', textTransform: 'capitalize' }}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t}
             </option>
           ))}
         </select>
@@ -51,14 +51,14 @@ export default function Step2Business({ data, onChange, onNext, onBack }) {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <label htmlFor="bd-volume" style={labelStyle}>Expected monthly volume (₹)</label>
+        <label htmlFor="bd-volume" style={labelStyle}>Expected monthly volume (USD)</label>
         <input
           id="bd-volume"
           type="number"
           min="1"
           value={data.expected_monthly_volume || ''}
           onChange={(e) => onChange({ ...data, expected_monthly_volume: parseFloat(e.target.value) || 0 })}
-          placeholder="50000"
+          placeholder="5000"
           style={{ ...inputStyle, borderColor: errors.expected_monthly_volume ? 'var(--danger)' : 'var(--border)' }}
         />
         {errors.expected_monthly_volume && <p style={errorStyle}>{errors.expected_monthly_volume}</p>}

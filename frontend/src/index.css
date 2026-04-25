@@ -13,6 +13,8 @@
   --accent-dim: rgba(232, 255, 107, 0.1);
   --success: #6BFF9E;
   --danger: #FF6B6B;
+  --warning: #FFD166;
+  --warning-dim: rgba(255, 209, 102, 0.08);
   --danger-dim: rgba(255, 107, 107, 0.08);
   --success-dim: rgba(107, 255, 158, 0.08);
   --radius: 8px;

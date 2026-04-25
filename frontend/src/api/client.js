@@ -48,6 +48,9 @@ export const submitKYC = () =>
 export const getMySubmission = () =>
   api.get('/kyc/me');
 
+export const getNotifications = () =>
+  api.get('/kyc/notifications');
+
 // Reviewer
 export const getQueue = (limit = 20, offset = 0) =>
   api.get(`/reviewer/queue?limit=${limit}&offset=${offset}`);

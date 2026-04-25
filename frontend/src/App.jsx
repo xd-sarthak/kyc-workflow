@@ -40,10 +40,31 @@ function ToastProvider({ children }) {
               fontSize: 13,
               color: 'var(--text-primary)',
               maxWidth: 360,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
               animation: 'fadeIn 150ms ease',
             }}
           >
-            {t.message}
+            <span>{t.message}</span>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((p) => p.id !== t.id))}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 20,
+                height: 20,
+              }}
+            >
+              ✕
+            </button>
           </div>
         ))}
       </div>
@@ -62,7 +83,9 @@ function ProtectedRoute({ children, requiredRole }) {
   const role = localStorage.getItem('role');
 
   if (!token) return <Navigate to="/login" replace />;
-  if (requiredRole && role !== requiredRole) return <Navigate to="/login" replace />;
+  if (requiredRole && role !== requiredRole) {
+    return <Navigate to={`/${role === 'reviewer' ? 'reviewer' : 'merchant'}`} replace />;
+  }
   return children;
 }
 

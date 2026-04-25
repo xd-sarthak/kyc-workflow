@@ -111,6 +111,7 @@ func main() {
 	kycHandler := handlers.NewKYCHandler(kycService)
 	reviewerHandler := handlers.NewReviewerHandler(reviewerService)
 	metricsHandler := handlers.NewMetricsHandler(metricsService)
+	notificationHandler := handlers.NewNotificationHandler(notificationStore)
 
 	// Build router
 	r := chi.NewRouter()
@@ -136,6 +137,7 @@ func main() {
 				r.Post("/save-draft", kycHandler.SaveDraft)
 				r.Post("/submit", kycHandler.Submit)
 				r.Get("/me", kycHandler.GetMySubmission)
+				r.Get("/notifications", notificationHandler.GetNotifications)
 			})
 
 			// Reviewer routes

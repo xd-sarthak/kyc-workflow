@@ -76,8 +76,13 @@ export default function Login() {
 
         <div style={styles.demo}>
           <p style={styles.demoTitle}>Demo accounts</p>
-          <p style={styles.demoLine}>reviewer@kyc.dev / password123</p>
-          <p style={styles.demoLine}>merchant.draft@kyc.dev / password123</p>
+          <p style={styles.demoLine}>reviewer@kyc.dev</p>
+          <p style={styles.demoLine}>merchant.draft@kyc.dev</p>
+          <p style={styles.demoLine}>merchant.submitted@kyc.dev</p>
+          <p style={styles.demoLine}>merchant.atrisk@kyc.dev</p>
+          <p style={styles.demoLine}>merchant.moreinfo@kyc.dev</p>
+          <p style={styles.demoLine}>merchant.approved@kyc.dev</p>
+          <p style={{...styles.demoLine, marginTop: 4, color: 'var(--text-tertiary)'}}>All passwords are: password123</p>
         </div>
       </div>
     </div>

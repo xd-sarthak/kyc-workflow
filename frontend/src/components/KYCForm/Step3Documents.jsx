@@ -11,18 +11,27 @@ const MAX_SIZE = 5 * 1024 * 1024;
 
 export default function Step3Documents({ files, onChange, onBack, onSubmit, loading }) {
   const fileRefs = useRef({});
+  const [errors, setErrors] = useState({});
 
   const handleFile = (key, file) => {
     if (file) {
       const valid = ['application/pdf', 'image/jpeg', 'image/png'];
-      if (!valid.includes(file.type)) return;
-      if (file.size > MAX_SIZE) return;
+      if (!valid.includes(file.type)) {
+        setErrors({ ...errors, [key]: 'Invalid file type. Only PDF/JPG/PNG allowed.' });
+        return;
+      }
+      if (file.size > MAX_SIZE) {
+        setErrors({ ...errors, [key]: 'File too large. Max 5 MB.' });
+        return;
+      }
     }
+    setErrors({ ...errors, [key]: undefined });
     onChange({ ...files, [key]: file });
   };
 
   const removeFile = (key) => {
     onChange({ ...files, [key]: null });
+    setErrors({ ...errors, [key]: undefined });
     if (fileRefs.current[key]) fileRefs.current[key].value = '';
   };
 
@@ -53,24 +62,31 @@ export default function Step3Documents({ files, onChange, onBack, onSubmit, load
                 </button>
               </div>
             ) : (
-              <div
-                style={dropzoneStyle}
-                onClick={() => fileRefs.current[ft.key]?.click()}
-              >
-                <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
-                  Click to upload
-                </p>
-                <p style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>
-                  PDF, JPEG, PNG · Max 5 MB
-                </p>
-                <input
-                  ref={(el) => (fileRefs.current[ft.key] = el)}
-                  id={`doc-${ft.key}`}
-                  type="file"
-                  accept={ACCEPTED}
-                  onChange={(e) => handleFile(ft.key, e.target.files[0])}
-                  style={{ display: 'none' }}
-                />
+              <div>
+                <div
+                  style={{ ...dropzoneStyle, borderColor: errors[ft.key] ? 'var(--danger)' : 'var(--border)' }}
+                  onClick={() => fileRefs.current[ft.key]?.click()}
+                >
+                  <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+                    Click to upload
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', marginTop: 4 }}>
+                    PDF, JPEG, PNG · Max 5 MB
+                  </p>
+                  <input
+                    ref={(el) => (fileRefs.current[ft.key] = el)}
+                    id={`doc-${ft.key}`}
+                    type="file"
+                    accept={ACCEPTED}
+                    onChange={(e) => handleFile(ft.key, e.target.files[0])}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+                {errors[ft.key] && (
+                  <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
+                    {errors[ft.key]}
+                  </p>
+                )}
               </div>
             )}
           </div>

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -12,7 +13,6 @@ import (
 )
 
 // Run seeds the database with initial data if it is empty.
-// Idempotent — checks before inserting.
 func Run(ctx context.Context, pool *pgxpool.Pool) error {
 	slog.Info("seed: checking if seed data is needed")
 
@@ -25,7 +25,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool) error {
 		return nil
 	}
 
-	slog.Info("seed: seeding database with demo data")
+	slog.Info("seed: seeding database with comprehensive test data")
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), 12)
 	if err != nil {
@@ -33,110 +33,164 @@ func Run(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	hp := string(hashedPassword)
 
+	// Helper for executing inserts
+	execQuery := func(q string, args ...any) error {
+		_, err := pool.Exec(ctx, q, args...)
+		return err
+	}
+
 	// 1. Create reviewer account
 	reviewerID := uuid.New()
-	_, err = pool.Exec(ctx,
-		`INSERT INTO users (id, email, password, role) VALUES ($1, $2, $3, $4)`,
-		reviewerID, "reviewer@kyc.dev", hp, "reviewer",
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create reviewer: %w", err)
+	if err := execQuery(`INSERT INTO users (id, email, password, role) VALUES ($1, $2, $3, $4)`, reviewerID, "reviewer@kyc.dev", hp, "reviewer"); err != nil {
+		return err
 	}
-	slog.Info("seed: created user",
-		"email", "reviewer@kyc.dev",
-		"role", "reviewer",
-		"user_id", reviewerID,
-	)
+	slog.Info("seed: created reviewer", "email", "reviewer@kyc.dev")
 
-	// 2. Create merchant with draft submission
-	merchantDraftID := uuid.New()
-	_, err = pool.Exec(ctx,
-		`INSERT INTO users (id, email, password, role) VALUES ($1, $2, $3, $4)`,
-		merchantDraftID, "merchant.draft@kyc.dev", hp, "merchant",
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create draft merchant: %w", err)
+	// SEED SCENARIOS:
+	type Scenario struct {
+		Email          string
+		State          string
+		BusinessName   string
+		CreatedHours   int
+		UpdatedHours   int
+		ReviewerNote   string
+		HasDocs        bool
+		Notifications  []string // event types
 	}
 
-	partialPD, _ := json.Marshal(map[string]string{
-		"full_name": "Draft Merchant",
-		"email":     "merchant.draft@kyc.dev",
-	})
-	draftSubID := uuid.New()
-	_, err = pool.Exec(ctx,
-		`INSERT INTO kyc_submissions (id, merchant_id, state, personal_details) VALUES ($1, $2, 'draft', $3)`,
-		draftSubID, merchantDraftID, partialPD,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create draft submission: %w", err)
-	}
-	slog.Info("seed: created user with draft submission",
-		"email", "merchant.draft@kyc.dev",
-		"role", "merchant",
-		"user_id", merchantDraftID,
-		"submission_id", draftSubID,
-		"state", "draft",
-	)
-
-	// 3. Create merchant with under_review submission
-	merchantReviewID := uuid.New()
-	_, err = pool.Exec(ctx,
-		`INSERT INTO users (id, email, password, role) VALUES ($1, $2, $3, $4)`,
-		merchantReviewID, "merchant.review@kyc.dev", hp, "merchant",
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create review merchant: %w", err)
-	}
-
-	fullPD, _ := json.Marshal(map[string]interface{}{
-		"full_name": "Review Merchant",
-		"email":     "merchant.review@kyc.dev",
-		"phone":     "+91-9876543210",
-	})
-	fullBD, _ := json.Marshal(map[string]interface{}{
-		"business_name":           "Review Corp",
-		"business_type":           "retail",
-		"expected_monthly_volume": 50000.0,
-	})
-
-	submissionID := uuid.New()
-	_, err = pool.Exec(ctx,
-		`INSERT INTO kyc_submissions (id, merchant_id, state, personal_details, business_details)
-		 VALUES ($1, $2, 'under_review', $3, $4)`,
-		submissionID, merchantReviewID, fullPD, fullBD,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create review submission: %w", err)
+	scenarios := []Scenario{
+		{
+			Email:        "merchant.draft@kyc.dev",
+			State:        "draft",
+			BusinessName: "Draft Agency",
+			CreatedHours: 48,
+			UpdatedHours: 48,
+			HasDocs:      false,
+		},
+		{
+			Email:        "merchant.submitted@kyc.dev",
+			State:        "submitted",
+			BusinessName: "Fresh E-commerce",
+			CreatedHours: 2,
+			UpdatedHours: 2,
+			HasDocs:      true,
+			Notifications: []string{"submitted"},
+		},
+		{
+			Email:        "merchant.atrisk@kyc.dev",
+			State:        "submitted",
+			BusinessName: "Old Freelancer",
+			CreatedHours: 48, // 48 hours ago -> marks it as at_risk
+			UpdatedHours: 48,
+			HasDocs:      true,
+			Notifications: []string{"submitted"},
+		},
+		{
+			Email:        "merchant.moreinfo@kyc.dev",
+			State:        "more_info_requested",
+			BusinessName: "InfoNeeded Corp",
+			CreatedHours: 72,
+			UpdatedHours: 5,
+			ReviewerNote: "The bank statement is blurry. Please upload a clear PDF of the last 3 months.",
+			HasDocs:      true,
+			Notifications: []string{"submitted", "under_review", "more_info_requested"},
+		},
+		{
+			Email:        "merchant.approved@kyc.dev",
+			State:        "approved",
+			BusinessName: "Approved Tech",
+			CreatedHours: 120,
+			UpdatedHours: 24,
+			HasDocs:      true,
+			Notifications: []string{"submitted", "under_review", "approved"},
+		},
 	}
 
-	// Create placeholder document records for all 3 types
-	for _, fileType := range []string{"pan", "aadhaar", "bank_statement"} {
-		_, err = pool.Exec(ctx,
-			`INSERT INTO documents (submission_id, file_type, storage_key, storage_backend, original_name, mime_type, size_bytes)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			submissionID, fileType,
-			fmt.Sprintf("submissions/%s/%s/seed-placeholder.pdf", submissionID, fileType),
-			"local",
-			fileType+"_seed.pdf",
-			"application/pdf",
-			1024,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create seed document %s: %w", fileType, err)
+	for _, s := range scenarios {
+		mID := uuid.New()
+		if err := execQuery(`INSERT INTO users (id, email, password, role) VALUES ($1, $2, $3, $4)`, mID, s.Email, hp, "merchant"); err != nil {
+			return err
 		}
-	}
-	slog.Info("seed: created user with under_review submission",
-		"email", "merchant.review@kyc.dev",
-		"role", "merchant",
-		"user_id", merchantReviewID,
-		"submission_id", submissionID,
-		"state", "under_review",
-		"documents", 3,
-	)
 
-	slog.Info("seed: database seeding complete",
-		"users_created", 3,
-		"submissions_created", 2,
-	)
+		pd, _ := json.Marshal(map[string]interface{}{
+			"full_name": s.BusinessName + " Owner",
+			"email":     s.Email,
+			"phone":     "+91 98765 00000",
+		})
+		
+		var bd []byte
+		if s.State != "draft" {
+			bType := "Agency"
+			if s.BusinessName == "Fresh E-commerce" { bType = "E-commerce" }
+			if s.BusinessName == "Old Freelancer" { bType = "Freelancer" }
+			if s.BusinessName == "InfoNeeded Corp" { bType = "Other" }
+			
+			bd, _ = json.Marshal(map[string]interface{}{
+				"business_name":           s.BusinessName,
+				"business_type":           bType,
+				"expected_monthly_volume": 25000.0,
+			})
+		} else {
+			bd, _ = json.Marshal(map[string]interface{}{})
+		}
+
+		now := time.Now()
+		cTime := now.Add(-time.Hour * time.Duration(s.CreatedHours))
+		uTime := now.Add(-time.Hour * time.Duration(s.UpdatedHours))
+
+		subID := uuid.New()
+		
+		var rNote *string
+		if s.ReviewerNote != "" {
+			rNote = &s.ReviewerNote
+		}
+
+		if err := execQuery(
+			`INSERT INTO kyc_submissions (id, merchant_id, state, personal_details, business_details, reviewer_note, created_at, updated_at) 
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			subID, mID, s.State, pd, bd, rNote, cTime, uTime,
+		); err != nil {
+			return err
+		}
+
+		// Documents
+		if s.HasDocs {
+			for _, fileType := range []string{"pan", "aadhaar", "bank_statement"} {
+				if err := execQuery(
+					`INSERT INTO documents (submission_id, file_type, storage_key, storage_backend, original_name, mime_type, size_bytes, uploaded_at)
+					 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+					subID, fileType,
+					fmt.Sprintf("submissions/%s/%s/seed-placeholder.pdf", subID, fileType),
+					"local", fileType+"_seed.pdf", "application/pdf", 1024, cTime,
+				); err != nil {
+					return err
+				}
+			}
+		}
+
+		// Notifications (timeline events)
+		for i, nEvent := range s.Notifications {
+			payload := map[string]interface{}{}
+			if nEvent == "more_info_requested" || nEvent == "rejected" {
+				payload["note"] = s.ReviewerNote
+			}
+			pBytes, _ := json.Marshal(payload)
+			
+			// Compute fake timestamp for the event based on order
+			nTime := cTime.Add(time.Hour * time.Duration(i*2))
+			if nTime.After(uTime) { nTime = uTime }
+
+			if err := execQuery(
+				`INSERT INTO notifications (merchant_id, event_type, payload, created_at) VALUES ($1, $2, $3, $4)`,
+				mID, nEvent, pBytes, nTime,
+			); err != nil {
+				return err
+			}
+		}
+
+		slog.Info("seed: created scenario", "email", s.Email, "state", s.State)
+	}
+
+	slog.Info("seed: database seeding complete")
 	return nil
 }
