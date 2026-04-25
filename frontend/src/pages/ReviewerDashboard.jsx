@@ -50,7 +50,16 @@ export default function ReviewerDashboard() {
     try {
       await transitionSubmission(selected.submission_id, toState, note);
       toast(`Transitioned to ${toState.replace(/_/g, ' ')}`, 'success');
-      setSelected(null);
+
+      if (toState === 'under_review') {
+        // Stay on detail view, re-fetch to show updated state and action buttons
+        const res = await getSubmissionDetail(selected.submission_id);
+        setSelected(res.data);
+        setNote('');
+      } else {
+        // Terminal action (approve/reject/more_info) — go back to queue
+        setSelected(null);
+      }
       await fetchQueue();
       await fetchMetrics();
     } catch (err) {

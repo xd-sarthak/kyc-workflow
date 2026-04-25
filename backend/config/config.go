@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 // Config holds all application configuration loaded from environment variables.
@@ -18,7 +20,10 @@ type Config struct {
 }
 
 // Load reads configuration from environment variables and validates required fields.
+// It automatically loads a .env file if one exists, without overriding already-set env vars.
 func Load() (*Config, error) {
+	// Load .env file if present. Ignore error (file may not exist in production).
+	_ = godotenv.Load()
 	cfg := &Config{
 		DatabaseURL:    os.Getenv("DATABASE_URL"),
 		JWTSecret:      os.Getenv("JWT_SECRET"),

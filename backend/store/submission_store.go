@@ -134,12 +134,12 @@ func (s *SubmissionStore) UpdateSubmissionState(ctx context.Context, id uuid.UUI
 	return nil
 }
 
-// ListSubmissionsByState retrieves submissions in a given state, oldest first.
-func (s *SubmissionStore) ListSubmissionsByState(ctx context.Context, state string, limit, offset int) ([]models.Submission, int, error) {
+// ListSubmissionsByStates retrieves submissions matching any of the given states, oldest first.
+func (s *SubmissionStore) ListSubmissionsByStates(ctx context.Context, states []string, limit, offset int) ([]models.Submission, int, error) {
 	// Get total count
 	var total int
 	err := s.db.Pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM kyc_submissions WHERE state = $1`, state,
+		`SELECT COUNT(*) FROM kyc_submissions WHERE state = ANY($1::text[])`, states,
 	).Scan(&total)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count submissions: %w", err)
@@ -147,8 +147,8 @@ func (s *SubmissionStore) ListSubmissionsByState(ctx context.Context, state stri
 
 	rows, err := s.db.Pool.Query(ctx,
 		`SELECT id, merchant_id, state, personal_details, business_details, reviewer_note, created_at, updated_at
-		 FROM kyc_submissions WHERE state = $1 ORDER BY created_at ASC LIMIT $2 OFFSET $3`,
-		state, limit, offset,
+		 FROM kyc_submissions WHERE state = ANY($1::text[]) ORDER BY created_at ASC LIMIT $2 OFFSET $3`,
+		states, limit, offset,
 	)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list submissions: %w", err)
